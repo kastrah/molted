@@ -1,0 +1,77 @@
+---
+session: general
+date: 2026-01-12
+status: partial
+outcome: PARTIAL_PLUS
+---
+
+goal: Merged Continuous Claude with OPC and implemented Clawdbot phases 4-8
+now: Build Zoho Cliq provider and install macOS/iOS apps for Phase 7
+
+test: docker exec opc-postgres psql -U opc -d opc -c "SELECT COUNT(*) FROM sessions"
+
+done_this_session:
+  - task: Fixed OPC + Continuous Claude database merge
+    files: [~/.opc/init-db.sql, ~/.opc/docker-compose.yml]
+  - task: Added sessions and file_claims tables to OPC schema
+    files: [~/.opc/init-db.sql]
+  - task: Fixed hook connection strings (claude:claude_dev → opc:opc_dev_password)
+    files: [~/.claude/hooks/src/shared/db-utils-pg.ts, ~/.claude/hooks/dist/*.mjs]
+  - task: Started OPC docker stack (postgres, pgbouncer, redis)
+    files: [~/.opc/docker-compose.yml]
+  - task: Updated cross-terminal-db.md global rule
+    files: [~/.claude/rules/cross-terminal-db.md]
+  - task: Reconnected WhatsApp provider (was disconnected 13h)
+    files: []
+  - task: Phase 4 - Added channel routing bindings for 3 agents
+    files: [~/.clawdbot/clawdbot.json]
+  - task: Phase 6 - Created standup skill
+    files: [~/clawd/skills/standup/SKILL.md]
+  - task: Phase 8 - Enabled browser automation
+    files: [~/.clawdbot/clawdbot.json]
+
+blockers:
+  - Phase 7 requires macOS app (clawdbot-mac) not installed
+  - Phase 7 requires iOS app for mobile pairing (not installed)
+  - Phase 5 (Zoho Cliq) needs provider built from scratch
+
+questions:
+  - What Zoho Cliq API endpoints to use for inbound/outbound?
+  - Should Zoho Cliq use webhook or polling?
+
+decisions:
+  - unified_database: Merged continuous_claude into OPC database (opc:opc_dev_password@5432/opc)
+  - routing_config: All 3 agents (Zuri/Atlas/Byte) bound to WhatsApp provider
+
+findings:
+  - hook_mismatch: Hooks expected continuous_claude db but OPC uses opc db - fixed
+  - whatsapp_disconnect: Provider was disconnected, needed providers login to reconnect
+  - agents_by_name: Agents activated by identity name mention (Zuri, Atlas, Byte)
+
+worked:
+  - Using sed for bulk connection string replacement in dist files
+  - Running init-db.sql manually after docker up to create missing tables
+  - daemon restart to pick up config changes
+
+failed:
+  - Docker Desktop became unresponsive mid-session, needed restart
+
+next:
+  - Build Zoho Cliq provider (src/providers/cliq/)
+  - Install clawdbot-mac for voice wake
+  - Install iOS app and pair device (clawdbot nodes approve)
+  - Test standup skill via WhatsApp
+
+files:
+  created:
+    - ~/clawd/skills/standup/SKILL.md
+    - thoughts/shared/handoffs/general/2026-01-12_04-18_continuous-claude-clawdbot-setup.yaml
+  modified:
+    - ~/.opc/init-db.sql
+    - ~/.claude/hooks/src/shared/db-utils-pg.ts
+    - ~/.claude/hooks/dist/heartbeat.mjs
+    - ~/.claude/hooks/dist/working-on-sync.mjs
+    - ~/.claude/hooks/dist/heartbeat.js
+    - ~/.claude/hooks/dist/working-on-sync.js
+    - ~/.claude/rules/cross-terminal-db.md
+    - ~/.clawdbot/clawdbot.json
