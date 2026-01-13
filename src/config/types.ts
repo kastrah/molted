@@ -72,13 +72,13 @@ export type LoggingConfig = {
   level?: "silent" | "fatal" | "error" | "warn" | "info" | "debug" | "trace";
   file?: string;
   consoleLevel?:
-    | "silent"
-    | "fatal"
-    | "error"
-    | "warn"
-    | "info"
-    | "debug"
-    | "trace";
+  | "silent"
+  | "fatal"
+  | "error"
+  | "warn"
+  | "info"
+  | "debug"
+  | "trace";
   consoleStyle?: "pretty" | "compact" | "json";
   /** Redact sensitive tokens in tool summaries. Default: "tools". */
   redactSensitive?: "off" | "tools";
@@ -293,14 +293,15 @@ export type HookMappingConfig = {
   textTemplate?: string;
   deliver?: boolean;
   channel?:
-    | "last"
-    | "whatsapp"
-    | "telegram"
-    | "discord"
-    | "slack"
-    | "signal"
-    | "imessage"
-    | "msteams";
+  | "last"
+  | "whatsapp"
+  | "telegram"
+  | "discord"
+  | "slack"
+  | "signal"
+  | "imessage"
+  | "msteams"
+  | "zoho-cliq";
   to?: string;
   /** Override model for this hook (provider/model or alias). */
   model?: string;
@@ -811,6 +812,7 @@ export type ChannelsConfig = {
   signal?: SignalConfig;
   imessage?: IMessageConfig;
   msteams?: MSTeamsConfig;
+  zohoCliq?: ZohoCliqConfig;
 };
 
 export type IMessageAccountConfig = {
@@ -868,6 +870,45 @@ export type IMessageConfig = {
   /** Optional per-account iMessage configuration (multi-account). */
   accounts?: Record<string, IMessageAccountConfig>;
 } & IMessageAccountConfig;
+
+export type ZohoCliqWebhookConfig = {
+  /** Port for the webhook server. Default: same as main or specific. */
+  port?: number;
+  /** Path for the webhook endpoint. Default: /zoho/webhook. */
+  path?: string;
+  /** Secret key for validating incoming webhook signatures (if applicable). */
+  secret?: string;
+};
+
+export type ZohoCliqAccountConfig = {
+  /** Optional display name for this account. */
+  name?: string;
+  /** If false, do not start this Zoho Cliq account. Default: true. */
+  enabled?: boolean;
+  /** OAuth Client ID. */
+  clientId?: string;
+  /** OAuth Client Secret. */
+  clientSecret?: string;
+  /** OAuth Refresh Token. */
+  refreshToken?: string;
+  /** Data Center (US, EU, IN, AU, JP, CN). Default: US. */
+  dc?: "US" | "EU" | "IN" | "AU" | "JP" | "CN" | "SA" | "UK" | "CA";
+  /** Webhook configuration. */
+  webhook?: ZohoCliqWebhookConfig;
+  /** Direct message access policy (default: pairing). */
+  dmPolicy?: DmPolicy;
+  /** Allowlist for DM senders (ZUIDs or emails). */
+  allowFrom?: Array<string>;
+  /** Outbound text chunk size (chars). Default: 1000. */
+  textChunkLimit?: number;
+  /** Retry policy for outbound API calls. */
+  retry?: OutboundRetryConfig;
+};
+
+export type ZohoCliqConfig = {
+  /** Optional per-account Configuration. */
+  accounts?: Record<string, ZohoCliqAccountConfig>;
+} & ZohoCliqAccountConfig;
 
 export type QueueMode =
   | "steer"
@@ -1140,11 +1181,11 @@ export type ToolsConfig = {
 export type AgentModelConfig =
   | string
   | {
-      /** Primary model (provider/model). */
-      primary?: string;
-      /** Per-agent model fallbacks (provider/model). */
-      fallbacks?: string[];
-    };
+    /** Primary model (provider/model). */
+    primary?: string;
+    /** Per-agent model fallbacks (provider/model). */
+    fallbacks?: string[];
+  };
 
 export type AgentConfig = {
   id: string;
@@ -1679,15 +1720,15 @@ export type AgentDefaultsConfig = {
     model?: string;
     /** Delivery target (last|whatsapp|telegram|discord|slack|msteams|signal|imessage|none). */
     target?:
-      | "last"
-      | "whatsapp"
-      | "telegram"
-      | "discord"
-      | "slack"
-      | "msteams"
-      | "signal"
-      | "imessage"
-      | "none";
+    | "last"
+    | "whatsapp"
+    | "telegram"
+    | "discord"
+    | "slack"
+    | "msteams"
+    | "signal"
+    | "imessage"
+    | "none";
     /** Optional delivery override (E.164 for WhatsApp, chat id for Telegram). */
     to?: string;
     /** Override the heartbeat prompt body (default: "Read HEARTBEAT.md if exists. Consider outstanding tasks. Checkup sometimes on your human during (user local) day time."). */
@@ -1780,10 +1821,10 @@ export type ClawdbotConfig = {
     vars?: Record<string, string>;
     /** Sugar: allow env vars directly under env (string values only). */
     [key: string]:
-      | string
-      | Record<string, string>
-      | { enabled?: boolean; timeoutMs?: number }
-      | undefined;
+    | string
+    | Record<string, string>
+    | { enabled?: boolean; timeoutMs?: number }
+    | undefined;
   };
   wizard?: {
     lastRunAt?: string;

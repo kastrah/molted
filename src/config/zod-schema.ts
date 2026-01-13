@@ -203,6 +203,7 @@ const QueueModeBySurfaceSchema = z
     signal: QueueModeSchema.optional(),
     imessage: QueueModeSchema.optional(),
     msteams: QueueModeSchema.optional(),
+    zohoCliq: QueueModeSchema.optional(),
     webchat: QueueModeSchema.optional(),
   })
   .optional();
@@ -771,6 +772,64 @@ const WhatsAppConfigSchema = z
     });
   });
 
+const ZohoCliqWebhookSchema = z.object({
+  port: z.number().int().positive().optional(),
+  path: z.string().optional(),
+  secret: z.string().optional(),
+});
+
+const ZohoCliqAccountSchemaBase = z.object({
+  name: z.string().optional(),
+  enabled: z.boolean().optional(),
+  clientId: z.string().optional(),
+  clientSecret: z.string().optional(),
+  refreshToken: z.string().optional(),
+  dc: z
+    .union([
+      z.literal("US"),
+      z.literal("EU"),
+      z.literal("IN"),
+      z.literal("AU"),
+      z.literal("JP"),
+      z.literal("CN"),
+      z.literal("SA"),
+      z.literal("UK"),
+      z.literal("CA"),
+    ])
+    .optional(),
+  webhook: ZohoCliqWebhookSchema.optional(),
+  dmPolicy: DmPolicySchema.optional().default("pairing"),
+  allowFrom: z.array(z.string()).optional(),
+  textChunkLimit: z.number().int().positive().optional(),
+  retry: RetryConfigSchema,
+});
+
+const ZohoCliqAccountSchema = ZohoCliqAccountSchemaBase.superRefine(
+  (value, ctx) => {
+    requireOpenAllowFrom({
+      policy: value.dmPolicy,
+      allowFrom: value.allowFrom,
+      ctx,
+      path: ["allowFrom"],
+      message:
+        'zohoCliq.dmPolicy="open" requires zohoCliq.allowFrom to include "*"',
+    });
+  },
+);
+
+const ZohoCliqConfigSchema = ZohoCliqAccountSchemaBase.extend({
+  accounts: z.record(z.string(), ZohoCliqAccountSchema.optional()).optional(),
+}).superRefine((value, ctx) => {
+  requireOpenAllowFrom({
+    policy: value.dmPolicy,
+    allowFrom: value.allowFrom,
+    ctx,
+    path: ["allowFrom"],
+    message:
+      'zohoCliq.dmPolicy="open" requires zohoCliq.allowFrom to include "*"',
+  });
+});
+
 const ChannelsSchema = z
   .object({
     whatsapp: WhatsAppConfigSchema.optional(),
@@ -780,6 +839,7 @@ const ChannelsSchema = z
     signal: SignalConfigSchema.optional(),
     imessage: IMessageConfigSchema.optional(),
     msteams: MSTeamsConfigSchema.optional(),
+    zohoCliq: ZohoCliqConfigSchema.optional(),
   })
   .optional();
 
@@ -1234,6 +1294,7 @@ const HookMappingSchema = z
         z.literal("signal"),
         z.literal("imessage"),
         z.literal("msteams"),
+        z.literal("zoho-cliq"),
       ])
       .optional(),
     to: z.string().optional(),

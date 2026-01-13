@@ -7,6 +7,7 @@ import { sendMessageMSTeams } from "../msteams/send.js";
 import { sendMessageSignal } from "../signal/send.js";
 import { sendMessageSlack } from "../slack/send.js";
 import { sendMessageTelegram } from "../telegram/send.js";
+import { sendMessageZohoCliq } from "../zoho-cliq/send.js";
 
 export type CliDeps = {
   sendMessageWhatsApp: typeof sendMessageWhatsApp;
@@ -16,6 +17,7 @@ export type CliDeps = {
   sendMessageSignal: typeof sendMessageSignal;
   sendMessageIMessage: typeof sendMessageIMessage;
   sendMessageMSTeams: typeof sendMessageMSTeams;
+  sendMessageZohoCliq: (target: string, text: string) => Promise<unknown>;
 };
 
 export function createDefaultDeps(): CliDeps {
@@ -27,6 +29,7 @@ export function createDefaultDeps(): CliDeps {
     sendMessageSignal,
     sendMessageIMessage,
     sendMessageMSTeams,
+    sendMessageZohoCliq,
   };
 }
 

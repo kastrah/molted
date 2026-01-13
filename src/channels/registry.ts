@@ -8,6 +8,7 @@ export const CHAT_CHANNEL_ORDER = [
   "signal",
   "imessage",
   "msteams",
+  "zoho-cliq",
 ] as const;
 
 export type ChatChannelId = (typeof CHAT_CHANNEL_ORDER)[number];
@@ -93,6 +94,14 @@ const CHAT_CHANNEL_META: Record<ChatChannelId, ChatChannelMeta> = {
     docsPath: "/channels/msteams",
     docsLabel: "msteams",
     blurb: "supported (Bot Framework).",
+  },
+  "zoho-cliq": {
+    id: "zoho-cliq",
+    label: "Zoho Cliq",
+    selectionLabel: "Zoho Cliq (OAuth)",
+    docsPath: "/channels/zoho-cliq",
+    docsLabel: "zoho-cliq",
+    blurb: "supported (OAuth API).",
   },
 };
 
