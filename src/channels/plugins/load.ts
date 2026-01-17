@@ -14,6 +14,7 @@ const LOADERS: Record<ChannelId, PluginLoader> = {
   signal: async () => (await import("./signal.js")).signalPlugin,
   imessage: async () => (await import("./imessage.js")).imessagePlugin,
   msteams: async () => (await import("./msteams.js")).msteamsPlugin,
+  "zoho-cliq": async () => (await import("./zoho-cliq.js")).zohoCliqPlugin,
 };
 
 const cache = new Map<ChannelId, ChannelPlugin>();

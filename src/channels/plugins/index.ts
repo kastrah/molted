@@ -11,6 +11,7 @@ import { slackPlugin } from "./slack.js";
 import { telegramPlugin } from "./telegram.js";
 import type { ChannelId, ChannelPlugin } from "./types.js";
 import { whatsappPlugin } from "./whatsapp.js";
+import { zohoCliqPlugin } from "./zoho-cliq.js";
 
 // Channel plugins registry (runtime).
 //
@@ -31,6 +32,7 @@ function resolveChannels(): ChannelPlugin[] {
     signalPlugin,
     imessagePlugin,
     msteamsPlugin,
+    zohoCliqPlugin,
   ];
 }
 
@@ -63,5 +65,6 @@ export {
   slackPlugin,
   telegramPlugin,
   whatsappPlugin,
+  zohoCliqPlugin,
 };
 export type { ChannelId, ChannelPlugin } from "./types.js";

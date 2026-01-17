@@ -46,7 +46,7 @@ const mergeMissing = (
   }
 };
 
-const AUDIO_TRANSCRIPTION_CLI_ALLOWLIST = new Set(["whisper"]);
+const AUDIO_TRANSCRIPTION_CLI_ALLOWLIST = new Set(["whisper", "parakeet-mlx"]);
 
 const mapLegacyAudioTranscription = (
   value: unknown,

@@ -9,7 +9,7 @@ import { runExec } from "../process/exec.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { applyTemplate, type MsgContext } from "./templating.js";
 
-const AUDIO_TRANSCRIPTION_BINARY = "whisper";
+const AUDIO_TRANSCRIPTION_BINARY = "parakeet-mlx";
 
 export function isAudio(mediaType?: string | null) {
   return Boolean(mediaType?.startsWith("audio"));

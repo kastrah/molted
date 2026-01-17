@@ -9,6 +9,7 @@ import type { sendMessageSignal } from "../../signal/send.js";
 import type { sendMessageSlack } from "../../slack/send.js";
 import type { sendMessageTelegram } from "../../telegram/send.js";
 import type { sendMessageWhatsApp } from "../../web/outbound.js";
+import type { sendMessageZohoCliq } from "../../zoho-cliq/send.js";
 import type { NormalizedOutboundPayload } from "./payloads.js";
 import { normalizeOutboundPayloads } from "./payloads.js";
 import type { OutboundChannel } from "./targets.js";
@@ -28,6 +29,7 @@ export type OutboundSendDeps = {
     text: string,
     opts?: { mediaUrl?: string },
   ) => Promise<{ messageId: string; conversationId: string }>;
+  sendZohoCliq?: typeof sendMessageZohoCliq;
 };
 
 export type OutboundDeliveryResult = {

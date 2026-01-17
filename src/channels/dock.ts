@@ -321,6 +321,30 @@ const DOCKS: Record<ChannelId, ChannelDock> = {
       }),
     },
   },
+  "zoho-cliq": {
+    id: "zoho-cliq",
+    capabilities: {
+      chatTypes: ["direct", "group"],
+      media: true,
+    },
+    outbound: { textChunkLimit: 4000 },
+    config: {
+      resolveAllowFrom: ({ cfg, accountId }) => {
+        if (!accountId) return [];
+        return (
+          cfg.channels?.["zoho-cliq"]?.accounts?.[accountId]?.allowFrom ?? []
+        ).map((entry) => String(entry));
+      },
+      formatAllowFrom: ({ allowFrom }) => formatLower(allowFrom),
+    },
+    threading: {
+      buildToolContext: ({ context, hasRepliedRef }) => ({
+        currentChannelId: context.To?.trim() || undefined,
+        currentThreadTs: context.ReplyToId,
+        hasRepliedRef,
+      }),
+    },
+  },
 };
 
 export function listChannelDocks(): ChannelDock[] {

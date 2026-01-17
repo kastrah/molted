@@ -126,7 +126,7 @@ Save to `~/.clawdbot/clawdbot.json` and you can DM the bot from that number.
   tools: {
     audio: {
       transcription: {
-        args: ["--model", "base", "{{MediaPath}}"],
+        args: ["--output-format", "txt"],
         timeoutSeconds: 120
       }
     }
