@@ -13,17 +13,18 @@ export type CronMessageChannel = ChannelId | "last";
 export type CronPayload =
   | { kind: "systemEvent"; text: string }
   | {
-      kind: "agentTurn";
-      message: string;
-      /** Optional model override (provider/model or alias). */
-      model?: string;
-      thinking?: string;
-      timeoutSeconds?: number;
-      deliver?: boolean;
-      channel?: CronMessageChannel;
-      to?: string;
-      bestEffortDeliver?: boolean;
-    };
+    kind: "agentTurn";
+    message: string;
+    /** Optional model override (provider/model or alias). */
+    model?: string;
+    thinking?: string;
+    timeoutSeconds?: number;
+    deliver?: boolean;
+    channel?: CronMessageChannel;
+    to?: string;
+    bestEffortDeliver?: boolean;
+  };
+
 
 export type CronIsolation = {
   postToMainPrefix?: string;

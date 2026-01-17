@@ -5,6 +5,7 @@ import type { OutboundSendDeps } from "../infra/outbound/deliver.js";
 import { sendMessageSignal } from "../signal/send.js";
 import { sendMessageSlack } from "../slack/send.js";
 import { sendMessageTelegram } from "../telegram/send.js";
+import { sendMessageZohoCliq } from "../zoho-cliq/send.js";
 
 export type CliDeps = {
   sendMessageWhatsApp: typeof sendMessageWhatsApp;
@@ -13,6 +14,7 @@ export type CliDeps = {
   sendMessageSlack: typeof sendMessageSlack;
   sendMessageSignal: typeof sendMessageSignal;
   sendMessageIMessage: typeof sendMessageIMessage;
+  sendMessageZohoCliq: (target: string, text: string) => Promise<unknown>;
 };
 
 export function createDefaultDeps(): CliDeps {
@@ -23,6 +25,7 @@ export function createDefaultDeps(): CliDeps {
     sendMessageSlack,
     sendMessageSignal,
     sendMessageIMessage,
+    sendMessageZohoCliq,
   };
 }
 
