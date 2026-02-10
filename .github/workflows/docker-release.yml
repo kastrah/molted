@@ -47,12 +47,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
             type=semver,pattern={{version}},suffix=-amd64
-            type=semver,pattern={{version}},suffix=-arm64
             type=ref,event=branch,suffix=-amd64
-            type=ref,event=branch,suffix=-arm64
 
       - name: Build and push amd64 image
         id: build
@@ -62,8 +58,8 @@ jobs:
           platforms: linux/amd64
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-cache:amd64
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-cache:amd64,mode=max
+          cache-from: type=gha,scope=molted-amd64
+          cache-to: type=gha,scope=molted-amd64,mode=max
           provenance: false
           push: true
 
@@ -96,11 +92,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{version}},suffix=-amd64
             type=semver,pattern={{version}},suffix=-arm64
-            type=ref,event=branch,suffix=-amd64
             type=ref,event=branch,suffix=-arm64
 
       - name: Build and push arm64 image
@@ -111,8 +103,8 @@ jobs:
           platforms: linux/arm64
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-cache:arm64
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-cache:arm64,mode=max
+          cache-from: type=gha,scope=molted-arm64
+          cache-to: type=gha,scope=molted-arm64,mode=max
           provenance: false
           push: true
 
