@@ -124,6 +124,39 @@ describe("subscribeEmbeddedPiSession", () => {
     const payload = onPartialReply.mock.calls[0][0];
     expect(payload.text).toBe("Hello world");
   });
+
+  it("sanitizes leaked reasoning preambles on non-streaming final text when enforcement is on", () => {
+    let handler: ((evt: unknown) => void) | undefined;
+    const session: StubSession = {
+      subscribe: (fn) => {
+        handler = fn;
+        return () => {};
+      },
+    };
+
+    const sub = subscribeEmbeddedPiSession({
+      session: session as unknown as Parameters<typeof subscribeEmbeddedPiSession>[0]["session"],
+      runId: "run",
+      enforceFinalTag: true,
+    });
+
+    const assistantMessage = {
+      role: "assistant",
+      content: [
+        {
+          type: "text",
+          text:
+            "The user is asking why the message was posted in the wrong channel. This suggests a routing issue. I should check bindings. I see - that message was posted to the wrong channel.",
+        },
+      ],
+    } as AssistantMessage;
+
+    handler?.({ type: "message_start", message: assistantMessage });
+    handler?.({ type: "message_end", message: assistantMessage });
+
+    expect(sub.assistantTexts).toEqual(["I see - that message was posted to the wrong channel."]);
+  });
+
   it("emits block replies on message_end", () => {
     let handler: ((evt: unknown) => void) | undefined;
     const session: StubSession = {

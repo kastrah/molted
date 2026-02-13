@@ -157,25 +157,26 @@ export function subscribeEmbeddedPiSession(params: SubscribeEmbeddedPiSessionPar
     chunkerHasBuffered: boolean;
   }) => {
     const { text, addedDuringMessage, chunkerHasBuffered } = args;
+    const filteredText = filterFinalText(text);
 
     // If we're not streaming block replies, ensure the final payload includes
     // the final text even when interim streaming was enabled.
-    if (state.includeReasoning && text && !params.onBlockReply) {
+    if (state.includeReasoning && filteredText && !params.onBlockReply) {
       if (assistantTexts.length > state.assistantTextBaseline) {
         assistantTexts.splice(
           state.assistantTextBaseline,
           assistantTexts.length - state.assistantTextBaseline,
-          text,
+          filteredText,
         );
-        rememberAssistantText(text);
+        rememberAssistantText(filteredText);
       } else {
-        pushAssistantText(text);
+        pushAssistantText(filteredText);
       }
       state.suppressBlockChunks = true;
-    } else if (!addedDuringMessage && !chunkerHasBuffered && text) {
+    } else if (!addedDuringMessage && !chunkerHasBuffered && filteredText) {
       // Non-streaming models (no text_delta): ensure assistantTexts gets the final
       // text when the chunker has nothing buffered to drain.
-      pushAssistantText(text);
+      pushAssistantText(filteredText);
     }
 
     state.assistantTextBaseline = assistantTexts.length;
@@ -423,6 +424,66 @@ export function subscribeEmbeddedPiSession(params: SubscribeEmbeddedPiSessionPar
     const resultCodeSpans = buildCodeSpanIndex(result, inlineStateStart);
     state.inlineCode = resultCodeSpans.inlineState;
     return stripTagsOutsideCodeSpans(result, FINAL_TAG_SCAN_RE, resultCodeSpans.isInside);
+  };
+
+  const sanitizeLeakedReasoningPreamble = (text: string): string => {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      return "";
+    }
+
+    // Heuristic fallback for providers that sometimes ignore <final> instructions and
+    // "think out loud" in plain text. Only used when strict <final> enforcement is enabled
+    // but no <final> block was found.
+    const hasReasoningPreamble =
+      /^the user\b/i.test(trimmed) ||
+      /^let me\b/i.test(trimmed) ||
+      /^i should\b/i.test(trimmed) ||
+      trimmed.slice(0, 500).includes("This suggests") ||
+      trimmed.slice(0, 500).includes("I should");
+
+    if (!hasReasoningPreamble) {
+      // If we can't confidently identify a leaked "thoughts" preamble, return the original.
+      return trimmed;
+    }
+
+    // Common transition markers where the model begins the user-visible response.
+    const markerRe =
+      /(?:^|\n\n|[.!?]\s+)(I see\b|To fix\b|Likely cause\b|Here(?:'|’)s\b|Next steps\b|Want me to\b)/i;
+    const match = markerRe.exec(trimmed);
+    if (match && typeof match.index === "number" && match.index > 0) {
+      const needle = match[1] ?? "";
+      const hay = match[0] ?? "";
+      const offsetInMatch = needle ? hay.toLowerCase().indexOf(needle.toLowerCase()) : -1;
+      const offset = offsetInMatch >= 0 ? offsetInMatch : 0;
+      return trimmed.slice(match.index + offset).trim();
+    }
+
+    // Fallback: drop the first paragraph if it looks like reasoning.
+    const paraBreak = trimmed.indexOf("\n\n");
+    if (paraBreak !== -1) {
+      return trimmed.slice(paraBreak + 2).trim();
+    }
+
+    return trimmed;
+  };
+
+  const filterFinalText = (text: string): string => {
+    if (!text) {
+      return text;
+    }
+    // Ensure <think>/<final> stripping applies even for non-streaming models that
+    // only deliver a single final text payload.
+    const localState = { thinking: false, final: false, inlineCode: createInlineCodeState() };
+    const filtered = stripDowngradedToolCallText(stripBlockTags(text, localState)).trim();
+    if (filtered) {
+      return filtered;
+    }
+    if (!params.enforceFinalTag) {
+      return text.trim();
+    }
+    // Strict mode but model ignored <final>. Use heuristic sanitizer instead of sending nothing.
+    return sanitizeLeakedReasoningPreamble(text);
   };
 
   const stripTagsOutsideCodeSpans = (

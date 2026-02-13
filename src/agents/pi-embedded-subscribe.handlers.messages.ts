@@ -29,6 +29,45 @@ const stripTrailingDirective = (text: string): string => {
   return text.slice(0, openIndex);
 };
 
+const sanitizeLeakedReasoningPreamble = (text: string): string => {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  // Heuristic fallback for providers that ignore the <final> contract and emit
+  // chain-of-thought as plain text. Only used when enforceFinalTag is enabled
+  // and the <final> extractor produced no visible text.
+  const hasReasoningPreamble =
+    /^the user\b/i.test(trimmed) ||
+    /^let me\b/i.test(trimmed) ||
+    /^i should\b/i.test(trimmed) ||
+    trimmed.slice(0, 500).includes("This suggests") ||
+    trimmed.slice(0, 500).includes("I should");
+
+  if (!hasReasoningPreamble) {
+    return trimmed;
+  }
+
+  const markerRe =
+    /(?:^|\n\n|[.!?]\s+)(I see\b|To fix\b|Likely cause\b|Here(?:'|’)s\b|Next steps\b|Want me to\b)/i;
+  const match = markerRe.exec(trimmed);
+  if (match && typeof match.index === "number" && match.index > 0) {
+    const needle = match[1] ?? "";
+    const hay = match[0] ?? "";
+    const offsetInMatch = needle ? hay.toLowerCase().indexOf(needle.toLowerCase()) : -1;
+    const offset = offsetInMatch >= 0 ? offsetInMatch : 0;
+    return trimmed.slice(match.index + offset).trim();
+  }
+
+  const paraBreak = trimmed.indexOf("\n\n");
+  if (paraBreak !== -1) {
+    return trimmed.slice(paraBreak + 2).trim();
+  }
+
+  return trimmed;
+};
+
 export function handleMessageStart(
   ctx: EmbeddedPiSubscribeContext,
   evt: AgentEvent & { message: AgentMessage },
@@ -211,7 +250,12 @@ export function handleMessageEnd(
     rawThinking: extractAssistantThinking(assistantMessage),
   });
 
-  const text = ctx.stripBlockTags(rawText, { thinking: false, final: false });
+  let text = ctx.stripBlockTags(rawText, { thinking: false, final: false });
+  if (!text.trim() && ctx.params.enforceFinalTag) {
+    // If strict final-tag enforcement produced no visible output, prefer a
+    // conservative sanitizer over falling back to raw (which can leak "thoughts").
+    text = sanitizeLeakedReasoningPreamble(rawText);
+  }
   const rawThinking =
     ctx.state.includeReasoning || ctx.state.streamReasoning
       ? extractAssistantThinking(assistantMessage) || extractThinkingFromTaggedText(rawText)
@@ -223,7 +267,7 @@ export function handleMessageEnd(
   let mediaUrls = parsedText?.mediaUrls;
   let hasMedia = Boolean(mediaUrls && mediaUrls.length > 0);
 
-  if (!cleanedText && !hasMedia) {
+  if (!cleanedText && !hasMedia && !ctx.params.enforceFinalTag) {
     const rawTrimmed = rawText.trim();
     const rawStrippedFinal = rawTrimmed.replace(/<\s*\/?\s*final\s*>/gi, "").trim();
     const rawCandidate = rawStrippedFinal || rawTrimmed;
