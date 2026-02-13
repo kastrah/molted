@@ -129,6 +129,25 @@ describe("runReplyAgent fallback reasoning tags", () => {
     expect(call?.enforceFinalTag).toBe(true);
   });
 
+  it("enforces <final> when the fallback provider is kimi-coding (to prevent reasoning leakage)", async () => {
+    runEmbeddedPiAgentMock.mockResolvedValueOnce({
+      payloads: [{ text: "ok" }],
+      meta: {},
+    });
+    runWithModelFallbackMock.mockImplementationOnce(
+      async ({ run }: { run: (provider: string, model: string) => Promise<unknown> }) => ({
+        result: await run("kimi-coding", "kimi-for-coding"),
+        provider: "kimi-coding",
+        model: "kimi-for-coding",
+      }),
+    );
+
+    await createRun();
+
+    const call = runEmbeddedPiAgentMock.mock.calls[0]?.[0] as EmbeddedPiAgentParams | undefined;
+    expect(call?.enforceFinalTag).toBe(true);
+  });
+
   it("enforces <final> during memory flush on fallback providers", async () => {
     runEmbeddedPiAgentMock.mockImplementation(async (params: EmbeddedPiAgentParams) => {
       if (params.prompt === DEFAULT_MEMORY_FLUSH_PROMPT) {

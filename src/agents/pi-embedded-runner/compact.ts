@@ -21,7 +21,7 @@ import { resolveTelegramReactionLevel } from "../../telegram/reaction-level.js";
 import { buildTtsSystemPromptHint } from "../../tts/tts.js";
 import { resolveUserPath } from "../../utils.js";
 import { normalizeMessageChannel } from "../../utils/message-channel.js";
-import { isReasoningTagProvider } from "../../utils/provider-utils.js";
+import { shouldHintReasoningTags } from "../../utils/provider-utils.js";
 import { resolveOpenClawAgentDir } from "../agent-paths.js";
 import { resolveSessionAgentIds } from "../agent-scope.js";
 import { makeBootstrapWarn, resolveBootstrapContextForRun } from "../bootstrap-files.js";
@@ -317,7 +317,7 @@ export async function compactEmbeddedPiSessionDirect(
       channelActions,
     };
     const sandboxInfo = buildEmbeddedSandboxInfo(sandbox, params.bashElevated);
-    const reasoningTagHint = isReasoningTagProvider(provider);
+    const reasoningTagHint = shouldHintReasoningTags(provider);
     const userTimezone = resolveUserTimezone(params.config?.agents?.defaults?.userTimezone);
     const userTimeFormat = resolveUserTimeFormat(params.config?.agents?.defaults?.timeFormat);
     const userTime = formatUserTime(new Date(), userTimezone, userTimeFormat);
