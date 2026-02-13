@@ -88,6 +88,7 @@ vi.mock("../failover-error.js", () => ({
 
 vi.mock("../usage.js", () => ({
   normalizeUsage: vi.fn(() => undefined),
+  derivePromptTokens: vi.fn(() => 0),
 }));
 
 vi.mock("./lanes.js", () => ({
