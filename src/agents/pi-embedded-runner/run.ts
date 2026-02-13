@@ -854,6 +854,15 @@ export async function runEmbeddedPiAgent(
             toolResultFormat: resolvedToolResultFormat,
             inlineToolResultsAllowed: false,
           });
+          // If the model used a messaging tool to deliver the user-visible reply (e.g. `message send`),
+          // do not also deliver an assistant payload. This prevents duplicate replies and avoids leaking
+          // any non-final text when strict <final> enforcement discards output.
+          const deliverPayloads =
+            attempt.didSendViaMessagingTool === true
+              ? undefined
+              : payloads.length
+                ? payloads
+                : undefined;
 
           log.debug(
             `embedded run done: runId=${params.runId} sessionId=${params.sessionId} durationMs=${Date.now() - started} aborted=${aborted}`,
@@ -872,7 +881,7 @@ export async function runEmbeddedPiAgent(
             });
           }
           return {
-            payloads: payloads.length ? payloads : undefined,
+            payloads: deliverPayloads,
             meta: {
               durationMs: Date.now() - started,
               agentMeta,
