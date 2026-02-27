@@ -242,6 +242,7 @@ export async function runCronIsolatedAgentTurn(params: {
     nowMs: now,
     // Isolated cron runs must not carry prior turn context across executions.
     forceNew: params.job.sessionTarget === "isolated",
+    maxInputTokens: params.cfg.cron?.maxSessionInputTokens,
   });
   const runSessionId = cronSession.sessionEntry.sessionId;
   const runSessionKey = baseSessionKey.startsWith("cron:")
@@ -523,6 +524,10 @@ export async function runCronIsolatedAgentTurn(params: {
     fallbackModel = fallbackResult.model;
     runEndedAt = Date.now();
   } catch (err) {
+    // Mark session as aborted so the next run forces a fresh session,
+    // preventing context accumulation from causing repeated timeouts.
+    cronSession.sessionEntry.abortedLastRun = true;
+    await persistSessionEntry();
     return withRunSession({ status: "error", error: String(err) });
   }
 

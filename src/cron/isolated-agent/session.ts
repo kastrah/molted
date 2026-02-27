@@ -8,12 +8,21 @@ import {
   type SessionEntry,
 } from "../../config/sessions.js";
 
+/**
+ * Default input-token ceiling for cron sessions. When a session's
+ * `inputTokens` exceeds this value the next run will start a fresh
+ * session instead of reusing the bloated one.
+ */
+export const DEFAULT_MAX_SESSION_INPUT_TOKENS = 150_000;
+
 export function resolveCronSession(params: {
   cfg: OpenClawConfig;
   sessionKey: string;
   nowMs: number;
   agentId: string;
   forceNew?: boolean;
+  /** Override the token-based rotation threshold. 0 disables. */
+  maxInputTokens?: number;
 }) {
   const sessionCfg = params.cfg.session;
   const storePath = resolveStorePath(sessionCfg?.store, {
@@ -41,10 +50,29 @@ export function resolveCronSession(params: {
     });
 
     if (freshness.fresh) {
-      // Reuse existing session
-      sessionId = entry.sessionId;
-      isNewSession = false;
-      systemSent = entry.systemSent ?? false;
+      // Token-based rotation: force a new session when the last run's input
+      // tokens exceeded the configured ceiling. This prevents context
+      // accumulation from causing repeated timeouts across cron runs.
+      const maxInputTokens = params.maxInputTokens ?? DEFAULT_MAX_SESSION_INPUT_TOKENS;
+      const entryInputTokens = entry.inputTokens ?? 0;
+
+      if (maxInputTokens > 0 && entryInputTokens > maxInputTokens) {
+        // Context too large — rotate to fresh session
+        sessionId = crypto.randomUUID();
+        isNewSession = true;
+        systemSent = false;
+      } else if (entry.abortedLastRun) {
+        // Last run was aborted or timed out — rotate so the next run starts
+        // with a clean context instead of replaying the bloated conversation.
+        sessionId = crypto.randomUUID();
+        isNewSession = true;
+        systemSent = false;
+      } else {
+        // Reuse existing session
+        sessionId = entry.sessionId;
+        isNewSession = false;
+        systemSent = entry.systemSent ?? false;
+      }
     } else {
       // Session expired, create new
       sessionId = crypto.randomUUID();
@@ -78,6 +106,8 @@ export function resolveCronSession(params: {
       lastThreadId: undefined,
       deliveryContext: undefined,
     }),
+    // Clear the abort flag when rotating to avoid a perpetual rotation loop.
+    ...(isNewSession ? { abortedLastRun: false } : {}),
   };
   return { storePath, store, sessionEntry, systemSent, isNewSession };
 }

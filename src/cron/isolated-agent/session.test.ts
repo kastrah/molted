@@ -9,7 +9,7 @@ vi.mock("../../config/sessions.js", () => ({
 }));
 
 import { loadSessionStore, evaluateSessionFreshness } from "../../config/sessions.js";
-import { resolveCronSession } from "./session.js";
+import { resolveCronSession, DEFAULT_MAX_SESSION_INPUT_TOKENS } from "./session.js";
 
 const NOW_MS = 1_737_600_000_000;
 
@@ -22,6 +22,7 @@ function resolveWithStoredEntry(params?: {
   entry?: MockSessionStoreEntry;
   forceNew?: boolean;
   fresh?: boolean;
+  maxInputTokens?: number;
 }) {
   const sessionKey = params?.sessionKey ?? "webhook:stable-key";
   const store: SessionStore = params?.entry
@@ -36,6 +37,7 @@ function resolveWithStoredEntry(params?: {
     agentId: "main",
     nowMs: NOW_MS,
     forceNew: params?.forceNew,
+    maxInputTokens: params?.maxInputTokens,
   });
 }
 
@@ -243,6 +245,163 @@ describe("resolveCronSession", () => {
       expect(result.isNewSession).toBe(true);
       // Should still preserve other fields from entry
       expect(result.sessionEntry.modelOverride).toBe("some-model");
+    });
+  });
+
+  describe("token-based session rotation", () => {
+    it("forces new session when inputTokens exceeds default threshold", () => {
+      const result = resolveWithStoredEntry({
+        entry: {
+          sessionId: "bloated-session",
+          updatedAt: NOW_MS - 1000,
+          inputTokens: DEFAULT_MAX_SESSION_INPUT_TOKENS + 1,
+        },
+        fresh: true,
+      });
+
+      expect(result.sessionEntry.sessionId).not.toBe("bloated-session");
+      expect(result.isNewSession).toBe(true);
+    });
+
+    it("preserves session when inputTokens is below default threshold", () => {
+      const result = resolveWithStoredEntry({
+        entry: {
+          sessionId: "healthy-session",
+          updatedAt: NOW_MS - 1000,
+          inputTokens: DEFAULT_MAX_SESSION_INPUT_TOKENS - 1,
+        },
+        fresh: true,
+      });
+
+      expect(result.sessionEntry.sessionId).toBe("healthy-session");
+      expect(result.isNewSession).toBe(false);
+    });
+
+    it("respects custom maxInputTokens override", () => {
+      const result = resolveWithStoredEntry({
+        entry: {
+          sessionId: "custom-threshold-session",
+          updatedAt: NOW_MS - 1000,
+          inputTokens: 50_001,
+        },
+        fresh: true,
+        maxInputTokens: 50_000,
+      });
+
+      expect(result.sessionEntry.sessionId).not.toBe("custom-threshold-session");
+      expect(result.isNewSession).toBe(true);
+    });
+
+    it("disables token rotation when maxInputTokens is 0", () => {
+      const result = resolveWithStoredEntry({
+        entry: {
+          sessionId: "large-but-allowed",
+          updatedAt: NOW_MS - 1000,
+          inputTokens: 999_999,
+        },
+        fresh: true,
+        maxInputTokens: 0,
+      });
+
+      expect(result.sessionEntry.sessionId).toBe("large-but-allowed");
+      expect(result.isNewSession).toBe(false);
+    });
+
+    it("preserves per-session overrides when rotating due to tokens", () => {
+      const result = resolveWithStoredEntry({
+        entry: {
+          sessionId: "bloated-with-overrides",
+          updatedAt: NOW_MS - 1000,
+          inputTokens: DEFAULT_MAX_SESSION_INPUT_TOKENS + 50_000,
+          modelOverride: "custom-model",
+          providerOverride: "custom-provider",
+          sendPolicy: "allow",
+        },
+        fresh: true,
+      });
+
+      expect(result.isNewSession).toBe(true);
+      expect(result.sessionEntry.modelOverride).toBe("custom-model");
+      expect(result.sessionEntry.providerOverride).toBe("custom-provider");
+      expect(result.sessionEntry.sendPolicy).toBe("allow");
+    });
+  });
+
+  describe("abort-based session rotation", () => {
+    it("forces new session when abortedLastRun is true", () => {
+      const result = resolveWithStoredEntry({
+        entry: {
+          sessionId: "aborted-session",
+          updatedAt: NOW_MS - 1000,
+          abortedLastRun: true,
+          inputTokens: 10_000, // below token threshold
+        },
+        fresh: true,
+      });
+
+      expect(result.sessionEntry.sessionId).not.toBe("aborted-session");
+      expect(result.isNewSession).toBe(true);
+    });
+
+    it("clears abortedLastRun flag after rotation", () => {
+      const result = resolveWithStoredEntry({
+        entry: {
+          sessionId: "aborted-session",
+          updatedAt: NOW_MS - 1000,
+          abortedLastRun: true,
+        },
+        fresh: true,
+      });
+
+      expect(result.isNewSession).toBe(true);
+      expect(result.sessionEntry.abortedLastRun).toBe(false);
+    });
+
+    it("clears abortedLastRun flag on token-based rotation too", () => {
+      const result = resolveWithStoredEntry({
+        entry: {
+          sessionId: "bloated-and-aborted",
+          updatedAt: NOW_MS - 1000,
+          abortedLastRun: true,
+          inputTokens: DEFAULT_MAX_SESSION_INPUT_TOKENS + 1,
+        },
+        fresh: true,
+      });
+
+      expect(result.isNewSession).toBe(true);
+      expect(result.sessionEntry.abortedLastRun).toBe(false);
+    });
+
+    it("does not rotate when abortedLastRun is false", () => {
+      const result = resolveWithStoredEntry({
+        entry: {
+          sessionId: "normal-session",
+          updatedAt: NOW_MS - 1000,
+          abortedLastRun: false,
+          inputTokens: 10_000,
+        },
+        fresh: true,
+      });
+
+      expect(result.sessionEntry.sessionId).toBe("normal-session");
+      expect(result.isNewSession).toBe(false);
+    });
+
+    it("preserves per-session overrides when rotating due to abort", () => {
+      const result = resolveWithStoredEntry({
+        entry: {
+          sessionId: "aborted-with-overrides",
+          updatedAt: NOW_MS - 1000,
+          abortedLastRun: true,
+          modelOverride: "sonnet-4",
+          providerOverride: "anthropic",
+        },
+        fresh: true,
+      });
+
+      expect(result.isNewSession).toBe(true);
+      expect(result.sessionEntry.modelOverride).toBe("sonnet-4");
+      expect(result.sessionEntry.providerOverride).toBe("anthropic");
     });
   });
 });

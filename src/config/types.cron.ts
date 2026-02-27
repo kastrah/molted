@@ -36,6 +36,13 @@ export type CronConfig = {
    */
   sessionRetention?: string | false;
   /**
+   * Maximum input tokens allowed on a cron session before forcing rotation
+   * to a fresh session. Prevents context accumulation from causing timeouts
+   * when sessions are reused across multiple runs within a daily reset window.
+   * Default: 150000 (150k tokens). Set to 0 to disable.
+   */
+  maxSessionInputTokens?: number;
+  /**
    * Run-log pruning controls for `cron/runs/<jobId>.jsonl`.
    * Defaults: `maxBytes=2_000_000`, `keepLines=2000`.
    */
